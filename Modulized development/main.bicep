@@ -20,14 +20,26 @@ param subnetPrefix01 string = '10.10.1.0/24'
 param subnetName02  string = 'PrivateHVnet-Subnet02'
 param subnetPrefix02 string = '10.10.2.0/24'
 
-// - - - Spoke Virtual Network - - - 
-@description('Parameters for Spoke Virtual Network')
-var vnetNameSpk = 'poc-Spk-Vnet-01'
-param ipAddressPrefixSpk array = ['10.1.0.0/16']
-var subnetName1Spk = 'poc-spk01-subnet01'
-var subnetName2Spk = 'poc-spk01-subnet02'
-param ipAddressPrefixSpk01Subnet01 string = '10.1.0.0/24'
-param ipAddressPrefixSpk01Subnet02 string = '10.1.1.0/24'
+// - - - Spoke Virtual Network 01- - - 
+@description('Parameters for Spoke Virtual Network 01')
+param vnetNameSpk1 string = 'Private-SpokeVNet-01'
+param ipAddressPrefixSpk1 array = ['10.11.0.0/16']
+param subnetName1Spk1 string = 'PrivateSpk01-Subnet01'
+param subnetName2Spk1 string = 'PrivateSpk01-Subnet02'
+param ipAddressPrefixSubnet01Spk1 string = '10.11.0.0/24'
+param ipAddressPrefixSubnet02Spk1 string = '10.11.1.0/24'
+
+// - - - Spoke Virtual Network 02- - - 
+@description('Parameters for Spoke Virtual Network 01')
+param vnetNameSpk2 string = 'Private-SpokeVNet-02'
+param ipAddressPrefixSpk2 array = ['10.12.0.0/16']
+param subnetName1Spk2 string = 'PrivateSpk02-Subnet01'
+param subnetName2Spk2 string = 'PrivateSpk02-Subnet02'
+param ipAddressPrefixSubnet01Spk2 string = '10.12.0.0/24'
+param ipAddressPrefixSubnet02Spk2 string = '10.12.1.0/24'
+
+
+
 // - - - Virtual Machine - - -
 @description('Parameters for Virtual Machine1')
 var vmName = ['poc-VM-01','poc-VM-02','poc-VM-03']
@@ -114,12 +126,12 @@ module createSpokeVNet1 './modules/2.spoke-vnet.bicep' = if(RunSpokeVnet1) {
   params: {
     tags: tags
     location: location
-    vnetName: 'hino-Spk-Vnet-01'
-    ipAddressPrefix: ['10.20.0.0/16']
-    subnetName1: 'hino-spk1-subnet01'
-    subnetName2: 'hino-spk1-subnet02'
-    subnetPrefix1: '10.20.0.0/24'
-    subnetPrefix2: '10.20.1.0/24'
+    vnetName: vnetNameSpk1
+    ipAddressPrefix: ipAddressPrefixSpk1
+    subnetName1: subnetName1Spk1
+    subnetName2: subnetName2Spk1
+    subnetPrefix1: ipAddressPrefixSubnet01Spk1
+    subnetPrefix2: ipAddressPrefixSubnet02Spk1
   }
 }
 
@@ -129,12 +141,12 @@ module createSpokeVNet2 './modules/2.spoke-vnet.bicep' = if(RunSpokeVnet2) {
   params: {
     tags: tags
     location: location
-    vnetName: 'hino-Spk-Vnet-02'
-    ipAddressPrefix: ['10.21.0.0/16']
-    subnetName1: 'hino-spk2-subnet01'
-    subnetName2: 'hino-spk2-subnet02'
-    subnetPrefix1: '10.21.0.0/24'
-    subnetPrefix2: '10.21.1.0/24'
+    vnetName: vnetNameSpk2
+    ipAddressPrefix: ipAddressPrefixSpk2
+    subnetName1: subnetName1Spk2
+    subnetName2: subnetName2Spk2
+    subnetPrefix1: ipAddressPrefixSubnet01Spk2  
+    subnetPrefix2: ipAddressPrefixSubnet02Spk2
   }
 }
 
@@ -198,8 +210,8 @@ module createVM './modules/5.virtualMachine.bicep' = [for i in vmIndex: if(RunVM
   params: {
     tag: tags
     location: location
-    vnetName: vnetNameSpk
-    subnetName: subnetName1Spk
+    vnetName: vnetNameSpk1
+    subnetName: subnetName1Spk1
     vmName: vmName[i]
     vmSize: vmSize
     adminUsername: adun
