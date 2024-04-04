@@ -32,8 +32,10 @@ resource spokeVnet 'Microsoft.Network/virtualNetworks@2022-05-01' = {
   }
 }
 
+output opSpkVnet object = spokeVnet
 output opSpkVnetId string = spokeVnet.id
 output opSpkVnetName string = spokeVnet.name
+output opSpkVnetPrefix string = spokeVnet.properties.addressSpace.addressPrefixes[0]
 output opSpkSubnetName0 string = spokeVnet.properties.subnets[0].name
 output opSpkSubnetName1 string = spokeVnet.properties.subnets[1].name
 output opSpkSubnetPrefix0 string = spokeVnet.properties.subnets[0].properties.addressPrefix
