@@ -3,11 +3,22 @@
 //All resources will be deployed in resource group "Bicep-fundermental-resourcegroup"
 //location will be inherited from the resource group
 // - - - - - - - - - - - - -
+// - - - Boolean for engaging deployment - - -
+// - - - true: engage / false; not engage - - -
+@description('Booleans for engaging deployment')
+param RunHubVnet bool = true
+param RunSpokeVnet1 bool = true
+param RunSpokeVnet2 bool = true
+param RunGateway bool = true
+param RunNSG bool = false
+param RunVM bool = false
+param RunSQLServer bool = false
+param RunBastion bool = false
+
 // - - - - - - - - - - - - -
 // - - - Paremeters defination - - - 
 @description('Parameter for location')
 param location string = resourceGroup().location
-
 // - - - - - - - - - 
 @description('Parameters for Hub Virtual Network')
 var vnetNameHub = 'Private-HubVnet'
@@ -19,24 +30,41 @@ param subnetName01  string = 'PrivateHVnet-Subnet01'
 param subnetPrefix01 string = '10.10.1.0/24'
 param subnetName02  string = 'PrivateHVnet-Subnet02'
 param subnetPrefix02 string = '10.10.2.0/24'
-
 // - - - Spoke Virtual Network 01- - - 
 @description('Parameters for Spoke Virtual Network 01')
 param vnetNameSpk1 string = 'Private-SpokeVNet-01'
 param ipAddressPrefixSpk1 array = ['10.11.0.0/16']
 param subnetName1Spk1 string = 'PrivateSpk01-Subnet01'
-param subnetName2Spk1 string = 'PrivateSpk01-Subnet02'
 param ipAddressPrefixSubnet01Spk1 string = '10.11.0.0/24'
+param subnetName2Spk1 string = 'PrivateSpk01-Subnet02'
 param ipAddressPrefixSubnet02Spk1 string = '10.11.1.0/24'
-
 // - - - Spoke Virtual Network 02- - - 
-@description('Parameters for Spoke Virtual Network 01')
+@description('Parameters for Spoke Virtual Network 02')
 param vnetNameSpk2 string = 'Private-SpokeVNet-02'
 param ipAddressPrefixSpk2 array = ['10.12.0.0/16']
 param subnetName1Spk2 string = 'PrivateSpk02-Subnet01'
-param subnetName2Spk2 string = 'PrivateSpk02-Subnet02'
 param ipAddressPrefixSubnet01Spk2 string = '10.12.0.0/24'
+param subnetName2Spk2 string = 'PrivateSpk02-Subnet02'
 param ipAddressPrefixSubnet02Spk2 string = '10.12.1.0/24'
+// - - - VPN Gateway - - -
+@description('Parameters for VPN Gateway')
+param vpnGatewayName string = 'Private-VPNGateway'
+param gatewayPublicIpName string = 'Private-VPNGateway-PublicIP'
+var gatewayPublicIpAllocationMethod = 'Static'
+var gatewayPublicIpAddressVersion = 'IPv4'
+var gatewayPublicIpSkuName = 'Standard'
+var gatewayPublicIpSkuTier = 'Regional'
+// - - - AFW Gateway - - -
+@description('Parameters for AFW Gateway')
+param afwGatewayName string = 'Private-AFWGateway'
+param afwGatewayPublicIpName string = 'Private-AFWGateway-PublicIP'
+
+
+
+
+
+
+
 
 
 
@@ -87,23 +115,11 @@ param tags object = {
   department: 'Infra'
   project: 'HINO'
 }
-
-// - - - Boolean for engaging deployment - - -
-// - - - true: engage / false; not engage - - -
-@description('Booleans for engaging deployment')
-param RunHubVnet bool = true
-param RunSpokeVnet1 bool = true
-param RunSpokeVnet2 bool = true
-param RunNSG bool = false
-param RunVM bool = false
-param RunSQLServer bool = false
-param RunBastion bool = false
 //-------
 //-------
 //------- Program starts here -------
-
-// 1. Create a hub virtual network
-module createHubVNet './modules/1.hub-vnet.bicep' = if (RunHubVnet) {
+// Create a hub virtual network
+module createHubVNet './modules/hub-vnet.bicep' = if (RunHubVnet) {
   name: 'createHubVnet'
   params: {
     tags: tags
@@ -120,8 +136,8 @@ module createHubVNet './modules/1.hub-vnet.bicep' = if (RunHubVnet) {
   }
 }
 
-// 2. Create the first spoke virtual network
-module createSpokeVNet1 './modules/2.spoke-vnet.bicep' = if(RunSpokeVnet1) {
+// Create the first spoke virtual network
+module createSpokeVNet1 './modules/spoke-vnet.bicep' = if(RunSpokeVnet1) {
   name: 'createSpokeVnet1'
   params: {
     tags: tags
@@ -135,8 +151,8 @@ module createSpokeVNet1 './modules/2.spoke-vnet.bicep' = if(RunSpokeVnet1) {
   }
 }
 
-// 3. Create the second spoke virtual network
-module createSpokeVNet2 './modules/2.spoke-vnet.bicep' = if(RunSpokeVnet2) {
+// Create the second spoke virtual network
+module createSpokeVNet2 './modules/spoke-vnet.bicep' = if(RunSpokeVnet2) {
   name: 'createSpokeVnet2'
   params: {
     tags: tags
@@ -150,43 +166,62 @@ module createSpokeVNet2 './modules/2.spoke-vnet.bicep' = if(RunSpokeVnet2) {
   }
 }
 
-// 4. Create a virtual network peering between the hub and spoke virtual networks
-module createVNetPeering1 './modules/3.vnetPeering.bicep' = if(RunSpokeVnet1) {
+// Create a virtual network peering between the hub and spoke1 virtual networks
+module createVNetPeering1 './modules/vnetPeering.bicep' = if(RunSpokeVnet1) {
   name: 'createVnetPeering1'
   dependsOn: [
     createHubVNet
     createSpokeVNet1
   ]
   params: {
-    vnetNameHub: createHubVNet.outputs.ophubVnetName
+    vnetNameHub: createHubVNet.outputs.opHubVnetName
     vnetNameSpk: createSpokeVNet1.outputs.opSpkVnetName
-    vnetHubVnetID:createHubVNet.outputs.ophubVnetId
+    vnetHubVnetID:createHubVNet.outputs.opHubVnetId
     vnetSpkVnetID:createSpokeVNet1.outputs.opSpkVnetId
     hubToSpokePeeringName: 'hub-to-${createSpokeVNet1.outputs.opSpkVnetName}'
     spokeToHubPeeringName: '${createSpokeVNet1.outputs.opSpkVnetName}-to-hub'
   }
 }
 
-// 5. Create a virtual network peering between the hub and spoke virtual networks
-module createVNetPeering2 './modules/3.vnetPeering.bicep' = if(RunSpokeVnet2) {
+// Create a virtual network peering between the hub and spoke2 virtual networks
+module createVNetPeering2 './modules/vnetPeering.bicep' = if(RunSpokeVnet2) {
   name: 'createVnetPeering2'
   dependsOn: [
     createHubVNet
     createSpokeVNet2
   ]
   params: {
-    vnetNameHub: createHubVNet.outputs.ophubVnetName
+    vnetNameHub: createHubVNet.outputs.opHubVnetName
     vnetNameSpk: createSpokeVNet2.outputs.opSpkVnetName
-    vnetHubVnetID:createHubVNet.outputs.ophubVnetId
+    vnetHubVnetID:createHubVNet.outputs.opHubVnetId
     vnetSpkVnetID:createSpokeVNet2.outputs.opSpkVnetId
     hubToSpokePeeringName: 'hub-to-${createSpokeVNet2.outputs.opSpkVnetName}'
     spokeToHubPeeringName: '${createSpokeVNet2.outputs.opSpkVnetName}-to-hub'
   }
 }
 
+module createGateway './Modules/gateway.bicep' = if(RunGateway) {
+  name : 'createGateway'
+  dependsOn: [
+    createHubVNet
+  ]
+  params: {
+    tags: tags
+    location: location
+    existingHubVNetName:createHubVNet.outputs.opHubVnetName
+    existingGatewaySubnetName:createHubVNet.outputs.opHubVnetGatawaySubnetName
+    gatewayPublicIpName:gatewayPublicIpName
+    gatewayPublicIpAllocationMethod:gatewayPublicIpAllocationMethod
+    gatewayPublicIpAddressVersion:gatewayPublicIpAddressVersion
+    gatewayPublicIpSkuName:gatewayPublicIpSkuName
+    gatewayPublicIpSkuTier:gatewayPublicIpSkuTier
+    vpnGatewayName:vpnGatewayName
+    HubVNetGatewaySubnetId:createHubVNet.outputs.opHubVnetGatawaySubnetId
+  }
+}
 
 // 4. create a NSG and attach it to the subnet in the spoke virtual network
-module createNSG './modules/4.nsg.bicep' = if(RunNSG) {
+module createNSG './modules/nsg.bicep' = if(RunNSG) {
   name : 'createNSG'
   dependsOn: [
     createSpokeVNet1
@@ -247,7 +282,7 @@ module createBastion './modules/7.bastion.bicep' = if(RunBastion) {
   params: {
     tags: tags
     location: location
-    vnetName: createHubVNet.outputs.ophubVnetName
+    vnetName: createHubVNet.outputs.opHubVnetName
     subnetName: bastionSubnetName
     ipAddressPrefix:ipAddressPrefixBastionSubnet
     publicIpAllocationMethod: publicIpAllocationMethod

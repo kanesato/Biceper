@@ -55,5 +55,15 @@ resource hubVnet 'Microsoft.Network/virtualNetworks@2022-05-01' = {
   }
 }
 
-output ophubVnetId string = hubVnet.id
-output ophubVnetName string = hubVnet.name
+output opHubVnetId string = hubVnet.id
+output opHubVnetName string = hubVnet.name
+output opHubVnetGatawaySubnetName string = hubVnet.properties.subnets[0].name
+output opHubVnetFirewallSubnetName string = hubVnet.properties.subnets[1].name
+output opHubVnetBastionSubnetName string = hubVnet.properties.subnets[2].name
+output opHubVnetSubnet01Name string = hubVnet.properties.subnets[3].name
+output opHubVnetSubnet02Name string = hubVnet.properties.subnets[4].name
+output opHubVnetGatawaySubnetId string = hubVnet.properties.subnets[0].id
+output opHubVnetFirewallSubnetId string = hubVnet.properties.subnets[1].id
+output opHubVnetBastionSubnetId string = hubVnet.properties.subnets[2].id
+output opHubVnetSubnet01Id string = hubVnet.properties.subnets[3].id
+output opHubVnetSubnet02Id string = hubVnet.properties.subnets[4].id

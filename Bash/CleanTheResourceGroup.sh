@@ -181,6 +181,19 @@ then
     done
 fi
 
+#--- delete vpn gateway -------
+echo "Start deleting all VPN Gateways in Resource Group :["$resourceGroupName"]"
+echo "Getting VPN Gateway list"
+echo " "
+items=$(az network vnet-gateway list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].id" -o tsv)
+for id in ${items[@]}
+do
+    echo "Deleting VPN Gateway with Id: "$id
+    az network vnet-gateway delete --ids $id
+    wait
+    echo "Deleted VPN Gateway with Id: "$id    
+done
+
 #--- Deletet SQL Server ---
 echo "Start deleting all SQL Servers in Resource Group :["$resourceGroupName"]"
 echo " "
@@ -222,15 +235,15 @@ wait
 
 #--- delete Storage Account -------
 echo "Getting Storage Account list"
-    echo " "
-    items=$(az storage account list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].id" -o tsv)
-    for id in ${items[@]}
-    do
-        echo "Deleting Storage Account with Id: "$id
-        az storage account delete --ids $id --yes
-        wait
-        echo "Deleted Storage Account with Id: "$id    
-    done
+echo " "
+items=$(az storage account list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].id" -o tsv)
+for id in ${items[@]}
+do
+    echo "Deleting Storage Account with Id: "$id
+    az storage account delete --ids $id --yes
+    wait
+    echo "Deleted Storage Account with Id: "$id    
+done
 
 
 # --- delete Azure firewall -------
@@ -273,20 +286,6 @@ echo "Getting route-table list"
         echo "Deleted route-table with Id: "$id    
     done
 
-# # --- delete all Private Link -------
-# echo "Getting Private Link list"
-
-#     echo " "
-#     items=$(az network private-dns link vnet list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].id" -o tsv)
-#     for id in ${items[@]}
-#     do
-#         echo "Deleting Private Link with Id: "$id
-#         az network private-dns link vnet delete --ids $id
-#         wait
-#         echo "Deleted Private Link with Id: "$id    
-#     done
-
-# --- delete all Private Zone -------
 echo "Getting Private Zone list"
 echo " "
 items=$(az network private-dns zone list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].name" -o tsv)
@@ -318,9 +317,21 @@ do
     echo "Deleted Private Zone with Id: "$id    
 done
 
+# --- delete all Virtual Network -------
+echo "Getting VNet list"
+echo " "
+items=$(az network vnet list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].id" -o tsv)
+for id in ${items[@]}
+do
+    echo "Deleting VNet with Id: "$id
+    az network vnet delete --ids $id
+    wait
+    echo "Deleted VNet with Id: "$id
+    echo " "
+done
 
-# --- delete all vnets -------
-az network vnet delete --name $hubvnetName --resource-group $resourceGroupName --subscription $subscriptionName
-wait    # wait for the vnet deletion
-az network vnet delete --name $spokevnetName --resource-group $resourceGroupName --subscription $subscriptionName
-wait    # wait for the vnet deletion
+# # --- delete all vnets -------
+# az network vnet delete --name $hubvnetName --resource-group $resourceGroupName --subscription $subscriptionName
+# wait    # wait for the vnet deletion
+# az network vnet delete --name $spokevnetName --resource-group $resourceGroupName --subscription $subscriptionName
+# wait    # wait for the vnet deletion
