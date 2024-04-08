@@ -15,7 +15,6 @@ param gatewayPublicIpSkuTier string
 param vpnGatewayName string
 param HubVNetGatewaySubnetId string
 
-
 // - - - create a vpn gateway in the hub virtual network - - -
 resource existingHubVNet 'Microsoft.Network/virtualNetworks@2023-09-01' existing = {
   name: existingHubVNetName
@@ -63,7 +62,7 @@ resource createVPNGateway 'Microsoft.Network/virtualNetworkGateways@2023-09-01' 
     vpnType: 'RouteBased'
     enableBgp: false
     activeActive: false
-    vpnGatewayGeneration: 'Generation1'
+    vpnGatewayGeneration: 'Generation2'
     allowRemoteVnetTraffic: false
     allowVirtualWanTraffic: false
     ipConfigurations: [

@@ -260,6 +260,19 @@ echo "Getting Azure firewall list"
         echo "Deleted Azure firewall with Id: "$id    
     done
 
+# --- delete all Azure Firewall Policy -------
+echo "Getting AFW Policy list"
+echo " "
+items=$(az network firewall policy list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].id" -o tsv)
+for id in ${items[@]}
+do
+    echo "Deleting AFW Policy with Id: "$id
+    az network firewall policy delete --ids $id
+    wait
+    echo "Deleted AFW Policy with Id: "$id
+    echo " "
+done
+
 # --- delete Public IP -------
 echo "Getting Public IP list"
 

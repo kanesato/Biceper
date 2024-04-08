@@ -1,47 +1,259 @@
-param azureFirewalls_self_s2s_hub_firwall_name string = 'self-s2s-hub-firwall'
-param publicIPAddresses_self_hubvnet_firewall_pip_externalid string = '/subscriptions/d8df623a-79c2-47ca-8542-9fdc6d9942e2/resourceGroups/self-s2s-hub-resourcegroup/providers/Microsoft.Network/publicIPAddresses/self-hubvnet-firewall-pip'
-param virtualNetworks_self_s2s_hub_vnet_externalid string = '/subscriptions/d8df623a-79c2-47ca-8542-9fdc6d9942e2/resourceGroups/self-s2s-hub-resourcegroup/providers/Microsoft.Network/virtualNetworks/self-s2s-hub-vnet'
-param publicIPAddresses_self_afw_publicip_02_externalid string = '/subscriptions/d8df623a-79c2-47ca-8542-9fdc6d9942e2/resourceGroups/self-s2s-hub-resourcegroup/providers/Microsoft.Network/publicIPAddresses/self-afw-publicip-02'
-param firewallPolicies_poc_hubvnet_fw_standard_policy_externalid string = '/subscriptions/d8df623a-79c2-47ca-8542-9fdc6d9942e2/resourceGroups/self-s2s-hub-resourcegroup/providers/Microsoft.Network/firewallPolicies/poc-hubvnet-fw-standard-policy'
+param firewallPolicies_poc_hubvnet_fw_standard_policy_name string = 'poc-hubvnet-fw-standard-policy'
 
-resource azureFirewalls_self_s2s_hub_firwall_name_resource 'Microsoft.Network/azureFirewalls@2023-09-01' = {
-  name: azureFirewalls_self_s2s_hub_firwall_name
+resource firewallPolicies_poc_hubvnet_fw_standard_policy_name_resource 'Microsoft.Network/firewallPolicies@2023-09-01' = {
+  name: firewallPolicies_poc_hubvnet_fw_standard_policy_name
   location: 'japaneast'
   properties: {
     sku: {
-      name: 'AZFW_VNet'
       tier: 'Standard'
     }
     threatIntelMode: 'Alert'
-    additionalProperties: {}
-    ipConfigurations: [
+    threatIntelWhitelist: {
+      fqdns: []
+      ipAddresses: []
+    }
+    dnsSettings: {
+      servers: [
+        '168.63.129.16'
+      ]
+      enableProxy: true
+    }
+    snat: {}
+  }
+}
+
+resource firewallPolicies_poc_hubvnet_fw_standard_policy_name_DefaultDnatRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-09-01' = {
+  parent: firewallPolicies_poc_hubvnet_fw_standard_policy_name_resource
+  name: 'DefaultDnatRuleCollectionGroup'
+  location: 'japaneast'
+  properties: {
+    priority: 100
+    ruleCollections: [
       {
-        name: 'self-hubvnet-firewall-pip'
-        id: '${azureFirewalls_self_s2s_hub_firwall_name_resource.id}/azureFirewallIpConfigurations/self-hubvnet-firewall-pip'
-        properties: {
-          publicIPAddress: {
-            id: publicIPAddresses_self_hubvnet_firewall_pip_externalid
-          }
-          subnet: {
-            id: '${virtualNetworks_self_s2s_hub_vnet_externalid}/subnets/AzureFirewallSubnet'
-          }
+        ruleCollectionType: 'FirewallPolicyNatRuleCollection'
+        action: {
+          type: 'Dnat'
         }
-      }
-      {
-        name: 'self-hubvnet-firewall-pip2'
-        id: '${azureFirewalls_self_s2s_hub_firwall_name_resource.id}/azureFirewallIpConfigurations/self-hubvnet-firewall-pip2'
-        properties: {
-          publicIPAddress: {
-            id: publicIPAddresses_self_afw_publicip_02_externalid
+        rules: [
+          {
+            ruleType: 'NatRule'
+            name: 'spk1-windows-1'
+            translatedAddress: '172.17.254.4'
+            translatedPort: '3389'
+            ipProtocols: [
+              'TCP'
+              'UDP'
+            ]
+            sourceAddresses: [
+              '*'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '20.222.5.35'
+            ]
+            destinationPorts: [
+              '2000'
+            ]
           }
-        }
+        ]
+        name: 'DNAT-rule'
+        priority: 1000
       }
     ]
-    networkRuleCollections: []
-    applicationRuleCollections: []
-    natRuleCollections: []
-    firewallPolicy: {
-      id: firewallPolicies_poc_hubvnet_fw_standard_policy_externalid
-    }
+  }
+}
+
+resource firewallPolicies_poc_hubvnet_fw_standard_policy_name_DefaultNetworkRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-09-01' = {
+  parent: firewallPolicies_poc_hubvnet_fw_standard_policy_name_resource
+  name: 'DefaultNetworkRuleCollectionGroup'
+  location: 'japaneast'
+  properties: {
+    priority: 200
+    ruleCollections: [
+      {
+        ruleCollectionType: 'FirewallPolicyFilterRuleCollection'
+        action: {
+          type: 'Allow'
+        }
+        rules: [
+          {
+            ruleType: 'NetworkRule'
+            name: 'fromSpoke01'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '172.17.254.0/24'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '*'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            ruleType: 'NetworkRule'
+            name: 'fromRT2600'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '192.168.4.0/24'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '172.17.0.0/16'
+              '10.0.0.0/8'
+              '172.20.0.0/16'
+              '172.18.0.0/16'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            ruleType: 'NetworkRule'
+            name: 'fromSpoke02'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '172.17.250.0/24'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '*'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            ruleType: 'NetworkRule'
+            name: 'fromSpoke01-02'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '172.17.255.0/24'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '*'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            ruleType: 'NetworkRule'
+            name: 'from migrate'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '10.10.0.0/16'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '*'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            ruleType: 'NetworkRule'
+            name: 'from Spoke04'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '172.17.251.0/24'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '*'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            ruleType: 'NetworkRule'
+            name: 'spk03-vmware'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '172.20.0.0/22'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '*'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            ruleType: 'NetworkRule'
+            name: 'for - spk05'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '172.18.0.0/20'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '*'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '*'
+            ]
+          }
+          {
+            ruleType: 'NetworkRule'
+            name: 'for-spk06-hpc'
+            ipProtocols: [
+              'Any'
+            ]
+            sourceAddresses: [
+              '172.18.16.0/20'
+            ]
+            sourceIpGroups: []
+            destinationAddresses: [
+              '*'
+            ]
+            destinationIpGroups: []
+            destinationFqdns: []
+            destinationPorts: [
+              '*'
+            ]
+          }
+        ]
+        name: 'network-rule'
+        priority: 1000
+      }
+    ]
   }
 }

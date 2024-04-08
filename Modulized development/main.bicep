@@ -7,19 +7,29 @@
 // - - - true: engage / false; not engage - - -
 @description('Booleans for engaging deployment')
 param RunHubVnet bool = true
-param RunSpokeVnet1 bool = true
-param RunSpokeVnet2 bool = true
-param RunGateway bool = true
+param RunSpokeVnet1 bool = false
+param RunSpokeVnet2 bool = false
+param RunGateway bool = false
 param RunNSG bool = false
 param RunVM bool = false
 param RunSQLServer bool = false
 param RunBastion bool = false
+param RunAFWPolicy bool = true
+param RunAFWMainPart bool = true
 
 // - - - - - - - - - - - - -
 // - - - Paremeters defination - - - 
+// - - - Tags - - -
+@description('Parameters for tags')
+param tags object = {
+  environment: 'poc'
+  department: 'Infra'
+  project: 'HINO'
+}
+// - - - Location - - -
 @description('Parameter for location')
 param location string = resourceGroup().location
-// - - - - - - - - - 
+// - - - Hub Virtual Network - - -
 @description('Parameters for Hub Virtual Network')
 var vnetNameHub = 'Private-HubVnet'
 param ipAddressPrefixHub array = ['10.10.0.0/16']
@@ -30,7 +40,7 @@ param subnetName01  string = 'PrivateHVnet-Subnet01'
 param subnetPrefix01 string = '10.10.1.0/24'
 param subnetName02  string = 'PrivateHVnet-Subnet02'
 param subnetPrefix02 string = '10.10.2.0/24'
-// - - - Spoke Virtual Network 01- - - 
+// - - - Spoke Virtual Network 01 - - - 
 @description('Parameters for Spoke Virtual Network 01')
 param vnetNameSpk1 string = 'Private-SpokeVNet-01'
 param ipAddressPrefixSpk1 array = ['10.11.0.0/16']
@@ -38,7 +48,7 @@ param subnetName1Spk1 string = 'PrivateSpk01-Subnet01'
 param ipAddressPrefixSubnet01Spk1 string = '10.11.0.0/24'
 param subnetName2Spk1 string = 'PrivateSpk01-Subnet02'
 param ipAddressPrefixSubnet02Spk1 string = '10.11.1.0/24'
-// - - - Spoke Virtual Network 02- - - 
+// - - - Spoke Virtual Network 02 - - - 
 @description('Parameters for Spoke Virtual Network 02')
 param vnetNameSpk2 string = 'Private-SpokeVNet-02'
 param ipAddressPrefixSpk2 array = ['10.12.0.0/16']
@@ -54,10 +64,34 @@ var gatewayPublicIpAllocationMethod = 'Static'
 var gatewayPublicIpAddressVersion = 'IPv4'
 var gatewayPublicIpSkuName = 'Standard'
 var gatewayPublicIpSkuTier = 'Regional'
-// - - - AFW Gateway - - -
+// - - - Azure Firewall - - -
 @description('Parameters for AFW Gateway')
-param afwGatewayName string = 'Private-AFWGateway'
-param afwGatewayPublicIpName string = 'Private-AFWGateway-PublicIP'
+param afwMainPartName string = 'Private-AzureFirewall'
+param afwTier string = 'Standard'
+param afwThreatIntelMode string = 'Alert' //'deny'/'alert'/'off'
+// - - - Azure Firewall Public IP - - -
+param afwPublicIpName string = 'Private-AFW-PublicIP'
+var afwPublicIpAllocationMethod = 'Static'
+var afwPublicIpAddressVersion = 'IPv4'
+var afwPublicIpSkuName = 'Standard'
+var afwPublicIpSkuTier = 'Regional'
+// - - - AFW Policy - - -
+param afwPolicyName string = 'Private-AFW-Policy'
+param afwPolicySKU string = 'Standard'
+param afwPolicyThreatIntelMode string = 'Alert'
+param afwPolicyEnableDNSProxy bool = false
+param afwPolicyDNSProxyServers array = ['168.63.129.16']
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -85,7 +119,6 @@ param staticIPaddress array = ['10.1.0.10', '10.1.0.11', '10.1.0.12']
 @description('Parameters for SQL Server')
 var sqlServerName = 'poc${uniqueString(resourceGroup().id,deployment().name)}'
 var sqlDatabaseName = 'pocbicepsqldatabase'
-
 @secure()
 param sqlLoginId string = 'adminuser'
 @secure()
@@ -108,13 +141,7 @@ var storageAccountName = 'poc${uniqueString(resourceGroup().id,deployment().name
 // - - - Log Analytics - - -
 // @description('Parameters for Log Analytics')
 // param logAnalyticsWorkspace string = 'poc-${uniqueString(resourceGroup().id,deployment().name,location)}'
-// - - - Tags - - -
-@description('Parameters for tags')
-param tags object = {
-  environment: 'poc'
-  department: 'Infra'
-  project: 'HINO'
-}
+
 //-------
 //-------
 //------- Program starts here -------
@@ -200,6 +227,7 @@ module createVNetPeering2 './modules/vnetPeering.bicep' = if(RunSpokeVnet2) {
   }
 }
 
+// Create a VPN Gateway
 module createGateway './Modules/gateway.bicep' = if(RunGateway) {
   name : 'createGateway'
   dependsOn: [
@@ -219,6 +247,74 @@ module createGateway './Modules/gateway.bicep' = if(RunGateway) {
     HubVNetGatewaySubnetId:createHubVNet.outputs.opHubVnetGatawaySubnetId
   }
 }
+
+module createAFWPolicy './modules/afwPolicy.bicep' = if(RunAFWMainPart) {
+  name : 'createAFWPolicy'
+  dependsOn: [
+    createHubVNet
+  ]
+  params: {
+    tags: tags
+    location: location
+    RunAFWPolicy: RunAFWPolicy
+    RunAFWMainPart: RunAFWMainPart
+    afwPolicyName:afwPolicyName
+    afwPolicySKU:afwPolicySKU 
+    afwPolicyThreatIntelMode:afwPolicyThreatIntelMode
+    afwPolicyDNSProxyServers:afwPolicyDNSProxyServers
+    afwPolicyEnableDNSProxy:afwPolicyEnableDNSProxy
+    afwPublicIpName:afwPublicIpName
+    afwPublicIpAllocationMethod:afwPublicIpAllocationMethod
+    afwPublicIpAddressVersion:afwPublicIpAddressVersion
+    afwPublicIpSkuName:afwPublicIpSkuName
+    afwPublicIpSkuTier:afwPublicIpSkuTier
+  }
+}
+
+module createAFWMainPart 'Modules/afwMainPart.bicep' = if (RunAFWMainPart) {
+  name: 'createAFWMainPart'
+  params: {
+    tags: tags
+    location: location
+    afwMainPartName:afwMainPartName
+    afwTier:afwTier
+    afwThreatIntelMode:afwThreatIntelMode
+    afwIPConfigurationId:createAFWPolicy.outputs.opAFWPublicIPId
+    afwPublicIPId:createAFWPolicy.outputs.opAFWPublicIPId
+    afwSubnetId:createHubVNet.outputs.opHubVnetFirewallSubnetId
+    afwPolicyId:createAFWPolicy.outputs.opAFWPolicyId
+  }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // 4. create a NSG and attach it to the subnet in the spoke virtual network
 module createNSG './modules/nsg.bicep' = if(RunNSG) {
