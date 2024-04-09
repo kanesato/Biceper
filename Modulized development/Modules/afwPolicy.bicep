@@ -1,39 +1,17 @@
 param location string
 param tags object
-param RunAFWPolicy bool
-param RunAFWMainPart bool
 // - - - AFW Policy - - -
 param afwPolicyName string
 param afwPolicySKU string
 param afwPolicyThreatIntelMode string
 param afwPolicyDNSProxyServers array
 param afwPolicyEnableDNSProxy bool
-// - - - Azure Public IP - - - 
-param afwPublicIpName string
-param afwPublicIpAllocationMethod string
-param afwPublicIpAddressVersion string
-param afwPublicIpSkuName string
-param afwPublicIpSkuTier string
-
-// - - - Create a public IP address for the bastion host - - -
-resource createAFWPublicIp 'Microsoft.Network/publicIPAddresses@2023-09-01' = if(RunAFWMainPart) {
-  name: afwPublicIpName
-  tags: tags
-  location: location
-  properties: {
-    publicIPAllocationMethod: afwPublicIpAllocationMethod
-    publicIPAddressVersion: afwPublicIpAddressVersion
-  }
-  sku: {
-    name: afwPublicIpSkuName
-    tier: afwPublicIpSkuTier
-  }
-}
+param afwDNatdestinationAddresses string
 // - - - - - - - - - 
 // - - - - - - - - - 
 // - - - - - - - - - 
 // Create an Azure Firewall Policy
-resource createAFWPolicy 'Microsoft.Network/firewallPolicies@2023-09-01' = if (RunAFWPolicy) {
+resource createAFWPolicy 'Microsoft.Network/firewallPolicies@2023-09-01' =  {
   name: afwPolicyName
   tags: tags
   location: location
@@ -54,7 +32,9 @@ resource createAFWPolicy 'Microsoft.Network/firewallPolicies@2023-09-01' = if (R
   }
 }
 
-resource createAFW_Policy_DefaultDnatRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-09-01'  = if (RunAFWPolicy) {
+// - - - create a Dnat-rule collection for Azure Firewall policy - - -
+// - - - Attach the rule collection to AFW policy - - -
+resource createAFW_Policy_DefaultDnatRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-09-01'  = {
   parent: createAFWPolicy
   dependsOn: [
     createAFWPolicy
@@ -85,7 +65,7 @@ resource createAFW_Policy_DefaultDnatRuleCollectionGroup 'Microsoft.Network/fire
             ]
             sourceIpGroups: []
             destinationAddresses: [
-              createAFWPublicIp.properties.ipAddress
+              afwDNatdestinationAddresses
             ]
             destinationPorts: [
               '2000'
@@ -97,7 +77,9 @@ resource createAFW_Policy_DefaultDnatRuleCollectionGroup 'Microsoft.Network/fire
   }
 }
 
-resource createAFW_Policy_DefaultNetworkRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-09-01'  = if (RunAFWPolicy)  {
+// - - - Create a network-rule collection for Azure Firewall policy - - -
+// - - - Attach the rule collection to AFW policy - - -
+resource createAFW_Policy_DefaultNetworkRuleCollectionGroup 'Microsoft.Network/firewallPolicies/ruleCollectionGroups@2023-09-01'  = {
   parent: createAFWPolicy
   dependsOn: [
     createAFWPolicy
@@ -112,29 +94,29 @@ resource createAFW_Policy_DefaultNetworkRuleCollectionGroup 'Microsoft.Network/f
         action: {
           type: 'Allow'
         }
-        rules: [
-          {
-            ruleType: 'NetworkRule'
-            name: 'SampleNetworkRule'
-            ipProtocols: [
-              'Any'
-              // 'TCP'
-              // 'UDP'
-            ]
-            sourceAddresses: [
-              '192.168.0.1'
-            ]
-            sourceIpGroups: []
-            destinationAddresses: [
-              '192.168.0.2'
-            ]
-            destinationIpGroups: []
-            destinationFqdns: []
-            destinationPorts: [
-              '1000'
-            ]
-          }
-        ]
+        // rules: [
+        //   {
+        //     ruleType: 'NetworkRule'
+        //     name: 'SampleNetworkRule'
+        //     ipProtocols: [
+        //       'Any'
+        //       // 'TCP'
+        //       // 'UDP'
+        //     ]
+        //     sourceAddresses: [
+        //       '192.168.0.1'
+        //     ]
+        //     sourceIpGroups: []
+        //     destinationAddresses: [
+        //       '192.168.0.2'
+        //     ]
+        //     destinationIpGroups: []
+        //     destinationFqdns: []
+        //     destinationPorts: [
+        //       '1000'
+        //     ]
+        //   }
+        // ]
         name: 'NetworkRule'
         priority: 1000
       }
@@ -142,5 +124,4 @@ resource createAFW_Policy_DefaultNetworkRuleCollectionGroup 'Microsoft.Network/f
   }
 }
 
-output opAFWPublicIPId string = createAFWPublicIp.id
 output opAFWPolicyId string = createAFWPolicy.id

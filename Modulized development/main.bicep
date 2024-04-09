@@ -15,8 +15,9 @@ param RunVM bool = false
 param RunSQLServer bool = false
 param RunBastion bool = false
 param RunAFWPolicy bool = true
-param RunAFWMainPart bool = true
-
+param RunAFWMainPart bool = false
+// - - - - - - - - - - - - -
+// - - - - - - - - - - - - -
 // - - - - - - - - - - - - -
 // - - - Paremeters defination - - - 
 // - - - Tags - - -
@@ -79,7 +80,7 @@ var afwPublicIpSkuTier = 'Regional'
 param afwPolicyName string = 'Private-AFW-Policy'
 param afwPolicySKU string = 'Standard'
 param afwPolicyThreatIntelMode string = 'Alert'
-param afwPolicyEnableDNSProxy bool = false
+param afwPolicyEnableDNSProxy bool = true
 param afwPolicyDNSProxyServers array = ['168.63.129.16']
 
 
@@ -248,7 +249,25 @@ module createGateway './Modules/gateway.bicep' = if(RunGateway) {
   }
 }
 
-module createAFWPolicy './modules/afwPolicy.bicep' = if(RunAFWMainPart) {
+// Create an Public IP for Azure Firewall 
+module createAFWPublicIP './modules/publicIP.bicep' = if(RunAFWMainPart) {
+  name : 'createAFWPublicIP'
+  dependsOn: [
+    createHubVNet
+  ]
+  params: {
+    tags: tags
+    location: location
+    PublicIpName:afwPublicIpName
+    PublicIpAllocationMethod:afwPublicIpAllocationMethod
+    PublicIpAddressVersion:afwPublicIpAddressVersion
+    PublicIpSkuName:afwPublicIpSkuName
+    PublicIpSkuTier:afwPublicIpSkuTier
+  }
+}
+
+
+module createAFWPolicy './modules/afwPolicy.bicep' = if(RunAFWPolicy) {
   name : 'createAFWPolicy'
   dependsOn: [
     createHubVNet
@@ -256,18 +275,12 @@ module createAFWPolicy './modules/afwPolicy.bicep' = if(RunAFWMainPart) {
   params: {
     tags: tags
     location: location
-    RunAFWPolicy: RunAFWPolicy
-    RunAFWMainPart: RunAFWMainPart
     afwPolicyName:afwPolicyName
     afwPolicySKU:afwPolicySKU 
     afwPolicyThreatIntelMode:afwPolicyThreatIntelMode
     afwPolicyDNSProxyServers:afwPolicyDNSProxyServers
     afwPolicyEnableDNSProxy:afwPolicyEnableDNSProxy
-    afwPublicIpName:afwPublicIpName
-    afwPublicIpAllocationMethod:afwPublicIpAllocationMethod
-    afwPublicIpAddressVersion:afwPublicIpAddressVersion
-    afwPublicIpSkuName:afwPublicIpSkuName
-    afwPublicIpSkuTier:afwPublicIpSkuTier
+    afwDNatdestinationAddresses:createAFWPublicIP.outputs.opPublicIPAddress
   }
 }
 
@@ -279,8 +292,8 @@ module createAFWMainPart 'Modules/afwMainPart.bicep' = if (RunAFWMainPart) {
     afwMainPartName:afwMainPartName
     afwTier:afwTier
     afwThreatIntelMode:afwThreatIntelMode
-    afwIPConfigurationId:createAFWPolicy.outputs.opAFWPublicIPId
-    afwPublicIPId:createAFWPolicy.outputs.opAFWPublicIPId
+//    afwIPConfigurationId:createAFWPolicy.outputs.opAFWPublicIPId
+    afwPublicIPId:createAFWPublicIP.outputs.opPublicIPId
     afwSubnetId:createHubVNet.outputs.opHubVnetFirewallSubnetId
     afwPolicyId:createAFWPolicy.outputs.opAFWPolicyId
   }

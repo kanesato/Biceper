@@ -3,7 +3,6 @@ param tags object
 param afwMainPartName string
 param afwTier string
 param afwThreatIntelMode string
-param afwIPConfigurationId string
 param afwPublicIPId string
 param afwSubnetId string
 param afwPolicyId string
