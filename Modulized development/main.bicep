@@ -1,21 +1,22 @@
 // - - - preconditions - - - 
 // - - - - - - - - - - - - -
-//All resources will be deployed in resource group "Bicep-fundermental-resourcegroup"
-//location will be inherited from the resource group
-// - - - - - - - - - - - - -
 // - - - Boolean for engaging deployment - - -
 // - - - true: engage / false; not engage - - -
 @description('Booleans for engaging deployment')
-param RunHubVnet bool = true
-param RunSpokeVnet1 bool = false
-param RunSpokeVnet2 bool = false
-param RunGateway bool = false
-param RunNSG bool = false
-param RunVM bool = false
-param RunSQLServer bool = false
-param RunBastion bool = false
-param RunAFWPolicy bool = true
-param RunAFWMainPart bool = false
+param DeployHubVnet bool = true
+param DeploySpokeVnet1 bool = false
+param DeploySpokeVnet2 bool = false
+param DeployGateway bool = true
+param DeployAFWPolicy bool = false
+param DeployAFWMainPart bool = false
+param DeployBastion bool = false
+// - - - 
+param DeployNSG bool = false
+param DeployVM bool = false
+param DeploySQLServer bool = false
+// - - - - - - - - - - - - -
+//All resources will be deployed in resource group "Bicep-fundermental-resourcegroup"
+//location will be inherited from the resource group
 // - - - - - - - - - - - - -
 // - - - - - - - - - - - - -
 // - - - - - - - - - - - - -
@@ -71,17 +72,28 @@ param afwMainPartName string = 'Private-AzureFirewall'
 param afwTier string = 'Standard'
 param afwThreatIntelMode string = 'Alert' //'deny'/'alert'/'off'
 // - - - Azure Firewall Public IP - - -
-param afwPublicIpName string = 'Private-AFW-PublicIP'
-var afwPublicIpAllocationMethod = 'Static'
-var afwPublicIpAddressVersion = 'IPv4'
-var afwPublicIpSkuName = 'Standard'
-var afwPublicIpSkuTier = 'Regional'
+param afwPublicIPName string = 'Private-AFW-PublicIP'
+var afwPublicIPAllocationMethod = 'Static'
+var afwPublicIPAddressVersion = 'IPv4'
+var afwPublicIPSkuName = 'Standard'
+var afwPublicIPSkuTier = 'Regional'
 // - - - AFW Policy - - -
 param afwPolicyName string = 'Private-AFW-Policy'
 param afwPolicySKU string = 'Standard'
 param afwPolicyThreatIntelMode string = 'Alert'
 param afwPolicyEnableDNSProxy bool = true
 param afwPolicyDNSProxyServers array = ['168.63.129.16']
+// - - - Bastion Public IP - - -
+@description('Parameters for Bastion Public IP')
+param bastionPublicIPName string = 'Private-Bastion-PublicIP'
+var bastionPublicIPAllocationMethod = 'Static'
+var bastionPublicIPAddressVersion = 'IPv4'
+var bastionPublicIPSkuName = 'Standard'
+var bastionPublicIPSkuTier = 'Regional'
+// - - - Bastion - - -
+@description('Parameters for Bastion')
+param bastionName string = 'Private-Bastion'
+param bastionSKU string = 'Standard'
 
 
 
@@ -124,18 +136,6 @@ var sqlDatabaseName = 'pocbicepsqldatabase'
 param sqlLoginId string = 'adminuser'
 @secure()
 param sqlLoginPassword string = 'Rduaain08180422'
-// - - - Public IP(Bastion) - - -
-@description('Parameters for Public IP(Bastion)')
-var publicIpName = 'poc-Bastion-PublicIP'
-var publicIpAllocationMethod = 'Static'
-var publicIpAddressVersion = 'IPv4'
-var publicIpSkuName = 'Standard'
-var publicIpSkuTier = 'Regional'
-// - - - Bastion - - -
-@description('Parameters for Bastion')
-var bastionSubnetName = 'AzureBastionSubnet'
-param ipAddressPrefixBastionSubnet string = '10.0.0.0/26'
-var bastionName = 'poc-Bastion-Hub'
 // - - - Storage Account - - -
 @description('Parameters for Storage Account')
 var storageAccountName = 'poc${uniqueString(resourceGroup().id,deployment().name)}'
@@ -143,11 +143,13 @@ var storageAccountName = 'poc${uniqueString(resourceGroup().id,deployment().name
 // @description('Parameters for Log Analytics')
 // param logAnalyticsWorkspace string = 'poc-${uniqueString(resourceGroup().id,deployment().name,location)}'
 
+
+
 //-------
 //-------
 //------- Program starts here -------
 // Create a hub virtual network
-module createHubVNet './modules/hub-vnet.bicep' = if (RunHubVnet) {
+module createHubVNet './modules/hub-vnet.bicep' = if (DeployHubVnet) {
   name: 'createHubVnet'
   params: {
     tags: tags
@@ -164,8 +166,8 @@ module createHubVNet './modules/hub-vnet.bicep' = if (RunHubVnet) {
   }
 }
 
-// Create the first spoke virtual network
-module createSpokeVNet1 './modules/spoke-vnet.bicep' = if(RunSpokeVnet1) {
+// Create the 1st Spoke virtual network
+module createSpokeVNet1 './modules/spoke-vnet.bicep' = if(DeploySpokeVnet1) {
   name: 'createSpokeVnet1'
   params: {
     tags: tags
@@ -179,8 +181,8 @@ module createSpokeVNet1 './modules/spoke-vnet.bicep' = if(RunSpokeVnet1) {
   }
 }
 
-// Create the second spoke virtual network
-module createSpokeVNet2 './modules/spoke-vnet.bicep' = if(RunSpokeVnet2) {
+// Create the 2nd Spoke virtual network
+module createSpokeVNet2 './modules/spoke-vnet.bicep' = if(DeploySpokeVnet2) {
   name: 'createSpokeVnet2'
   params: {
     tags: tags
@@ -194,8 +196,8 @@ module createSpokeVNet2 './modules/spoke-vnet.bicep' = if(RunSpokeVnet2) {
   }
 }
 
-// Create a virtual network peering between the hub and spoke1 virtual networks
-module createVNetPeering1 './modules/vnetPeering.bicep' = if(RunSpokeVnet1) {
+// Create a virtual network peering between the hub and the 1st Spoke virtual networks
+module createVNetPeering1 './modules/vnetPeering.bicep' = if(DeploySpokeVnet1) {
   name: 'createVnetPeering1'
   dependsOn: [
     createHubVNet
@@ -211,8 +213,8 @@ module createVNetPeering1 './modules/vnetPeering.bicep' = if(RunSpokeVnet1) {
   }
 }
 
-// Create a virtual network peering between the hub and spoke2 virtual networks
-module createVNetPeering2 './modules/vnetPeering.bicep' = if(RunSpokeVnet2) {
+// Create a virtual network peering between the hub and the 2nd Spoke virtual networks
+module createVNetPeering2 './modules/vnetPeering.bicep' = if(DeploySpokeVnet2) {
   name: 'createVnetPeering2'
   dependsOn: [
     createHubVNet
@@ -229,7 +231,7 @@ module createVNetPeering2 './modules/vnetPeering.bicep' = if(RunSpokeVnet2) {
 }
 
 // Create a VPN Gateway
-module createGateway './Modules/gateway.bicep' = if(RunGateway) {
+module createGateway './Modules/gateway.bicep' = if(DeployGateway) {
   name : 'createGateway'
   dependsOn: [
     createHubVNet
@@ -249,8 +251,8 @@ module createGateway './Modules/gateway.bicep' = if(RunGateway) {
   }
 }
 
-// Create an Public IP for Azure Firewall 
-module createAFWPublicIP './modules/publicIP.bicep' = if(RunAFWMainPart) {
+@description('Create an Azure Firewall Public IP')
+module createAFWPublicIP './modules/publicIP.bicep' = if(DeployAFWMainPart) {
   name : 'createAFWPublicIP'
   dependsOn: [
     createHubVNet
@@ -258,16 +260,16 @@ module createAFWPublicIP './modules/publicIP.bicep' = if(RunAFWMainPart) {
   params: {
     tags: tags
     location: location
-    PublicIpName:afwPublicIpName
-    PublicIpAllocationMethod:afwPublicIpAllocationMethod
-    PublicIpAddressVersion:afwPublicIpAddressVersion
-    PublicIpSkuName:afwPublicIpSkuName
-    PublicIpSkuTier:afwPublicIpSkuTier
+    publicIPName:afwPublicIPName
+    publicIPAllocationMethod:afwPublicIPAllocationMethod
+    publicIPAddressVersion:afwPublicIPAddressVersion
+    publicIPSkuName:afwPublicIPSkuName
+    publicIPSkuTier:afwPublicIPSkuTier
   }
 }
 
-
-module createAFWPolicy './modules/afwPolicy.bicep' = if(RunAFWPolicy) {
+@description('Create a Azure Firewall Policy')
+module createAFWPolicy './modules/afwPolicy.bicep' = if(DeployAFWPolicy) {
   name : 'createAFWPolicy'
   dependsOn: [
     createHubVNet
@@ -284,7 +286,8 @@ module createAFWPolicy './modules/afwPolicy.bicep' = if(RunAFWPolicy) {
   }
 }
 
-module createAFWMainPart 'Modules/afwMainPart.bicep' = if (RunAFWMainPart) {
+@description('Create an Azure Firewall')
+module createAFWMainPart 'Modules/afwMainPart.bicep' = if (DeployAFWMainPart) {
   name: 'createAFWMainPart'
   params: {
     tags: tags
@@ -299,6 +302,40 @@ module createAFWMainPart 'Modules/afwMainPart.bicep' = if (RunAFWMainPart) {
   }
 }
 
+@description('Create a Public IP for Bastion')
+module createBastionPublicIP './modules/publicIP.bicep' = if(DeployBastion) {
+  name : 'createBastionPublicIP'
+  dependsOn: [
+    createHubVNet
+  ]
+  params: {
+    tags: tags
+    location: location
+    publicIPName: bastionPublicIPName
+    publicIPAllocationMethod: bastionPublicIPAllocationMethod
+    publicIPAddressVersion: bastionPublicIPAddressVersion
+    publicIPSkuName: bastionPublicIPSkuName
+    publicIPSkuTier: bastionPublicIPSkuTier
+  }
+}
+
+@description('create a bastion subnet in the hub virtual network')
+module createBastion './modules/bastion.bicep' = if(DeployBastion) {
+  name: 'createBastion'
+  dependsOn: [
+    createHubVNet
+    createVNetPeering1
+    createBastionPublicIP
+  ]
+  params: {
+    tags: tags
+    location: location
+    bastionName: bastionName
+    bastionSubnetID: createHubVNet.outputs.opHubVnetBastionSubnetId 
+    bastionPublicIPID: createBastionPublicIP.outputs.opPublicIPId
+    bastionSKU: bastionSKU
+  }
+}
 
 
 
@@ -330,7 +367,7 @@ module createAFWMainPart 'Modules/afwMainPart.bicep' = if (RunAFWMainPart) {
 
 
 // 4. create a NSG and attach it to the subnet in the spoke virtual network
-module createNSG './modules/nsg.bicep' = if(RunNSG) {
+module createNSG './modules/nsg.bicep' = if(DeployNSG) {
   name : 'createNSG'
   dependsOn: [
     createSpokeVNet1
@@ -346,7 +383,7 @@ module createNSG './modules/nsg.bicep' = if(RunNSG) {
 }
 
 // 5. create a virtual machine in the spoke virtual network
-module createVM './modules/5.virtualMachine.bicep' = [for i in vmIndex: if(RunVM) {
+module createVM './modules/5.virtualMachine.bicep' = [for i in vmIndex: if(DeployVM) {
   name: 'create${vmName[i]}'
   dependsOn: [
     createSpokeVNet1
@@ -368,7 +405,7 @@ module createVM './modules/5.virtualMachine.bicep' = [for i in vmIndex: if(RunVM
 }]
 
 // 6. create a SQL Server and a SQL Database
-module createSQLServer './modules/6.sqlServer&Database.bicep' = if(RunSQLServer) {
+module createSQLServer './modules/6.sqlServer&Database.bicep' = if(DeploySQLServer) {
 name: 'createSQLServer'
 params: {
   tags: tags
@@ -380,27 +417,5 @@ params: {
 }
 }
 
-// 7. create a bastion subnet in the hub virtual network
-module createBastion './modules/7.bastion.bicep' = if(RunBastion) {
-  name: 'createBastion'
-  dependsOn: [
-    createHubVNet
-    createSpokeVNet1
-    createVNetPeering1
-  ]
-  params: {
-    tags: tags
-    location: location
-    vnetName: createHubVNet.outputs.opHubVnetName
-    subnetName: bastionSubnetName
-    ipAddressPrefix:ipAddressPrefixBastionSubnet
-    publicIpAllocationMethod: publicIpAllocationMethod
-    publicIpAddressVersion: publicIpAddressVersion
-    publicIpSkuName: publicIpSkuName
-    publicIpSkuTier: publicIpSkuTier
-    publicIpName: publicIpName
-    bastionName: bastionName
-  }
-}
 
 //---EOF----

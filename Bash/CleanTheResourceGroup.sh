@@ -10,25 +10,27 @@ deleteFLG=1
 # --- This script is used to delete all resources in the resource group ---
 subscriptionName="Skaneshiro-external-sub-1"
 resourceGroupName="Bicep-fundermental-resourcegroup"
-hubvnetName="poc-Hub-Vnet"
-spokevnetName="poc-Spk-Vnet-01"
 
-# ----------------- Functions -----------------
+# --- delete all Virtual Network -------
+echo "Getting Bastion list"
+echo " "
 if (( $RunBastionFLG == 1))
 then
-    echo "Start deleting Bastion in"$resourceGroupName
-    az network bastion delete --name 'poc-Bastion-Hub' --resource-group $resourceGroupName --subscription $subscriptionName
-    wait    # wait for the bastion deletion
-    echo "Bastion was deleted"
-    echo " "
+    items=$(az network bastion list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].id" -o tsv)
+    for id in ${items[@]}
+    do
+        echo "Deleting Bastion with Id: "$id
+        az network bastion delete --ids $id
+        wait
+        echo "Deleted Bastion with Id: "$id
+        echo " "
+    done
 fi
 
-echo "■ Start deleting all NSG Endpoint in Resource Group :["$resourceGroupName"]"
+echo "■ Start deleting all NSG in Resource Group :["$resourceGroupName"]"
 if (( $RunNSGFLG == 1))
 then
     #--- Detach all nsgs -------
-    echo "Start detaching all nsgs"
-    echo " "
     echo "Getting vnet list in the resource group: "$resourceGroupName""
     echo " "
     vnets=$(az network vnet list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].{Name:name}" -o tsv)

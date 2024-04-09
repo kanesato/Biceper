@@ -55,8 +55,8 @@ resource createVPNGateway 'Microsoft.Network/virtualNetworkGateways@2023-09-01' 
     enableBgpRouteTranslationForNat: false
     disableIPSecReplayProtection: false
     sku: {
-      name: 'VpnGw1'
-      tier: 'VpnGw1'
+      name: 'VpnGw2'
+      tier: 'VpnGw2'
     }
     gatewayType: 'Vpn'
     vpnType: 'RouteBased'
