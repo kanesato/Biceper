@@ -4,12 +4,12 @@
 // - - - true: engage / false; not engage - - -
 @description('Booleans for engaging deployment')
 param DeployHubVnet bool = true
-param DeploySpokeVnet1 bool = false
-param DeploySpokeVnet2 bool = false
+param DeploySpokeVnet1 bool = true
+param DeploySpokeVnet2 bool = true
 param DeployGateway bool = true
-param DeployAFWPolicy bool = false
-param DeployAFWMainPart bool = false
-param DeployBastion bool = false
+param DeployAFWPolicy bool = true
+param DeployAFWMainPart bool = true
+param DeployBastion bool = true
 // - - - 
 param DeployNSG bool = false
 param DeployVM bool = false
