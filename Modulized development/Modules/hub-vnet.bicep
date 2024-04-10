@@ -4,6 +4,8 @@ param ipAddressPrefixes array
 param subnetGatewayPrefix string
 param subnetFirewallPrefix string
 param subnetBastionPrefix string
+param subnetDNSResolverInboundPrefix string
+param subnetDNSResolverOutboundPrefix string
 param subnetName01 string
 param subnetPrefix01 string
 param subnetName02 string
@@ -29,7 +31,7 @@ resource hubVnet 'Microsoft.Network/virtualNetworks@2022-05-01' = {
       {
         name: 'AzureFirewallSubnet'
         properties: {
-          addressPrefix: subnetFirewallPrefix
+          addressPrefix: subnetFirewallPrefix 
         }
       }
       {
@@ -37,6 +39,18 @@ resource hubVnet 'Microsoft.Network/virtualNetworks@2022-05-01' = {
         properties: {
           addressPrefix: subnetBastionPrefix
         
+        }
+      }
+      {
+        name: 'DNSResolverInboundSubnet'
+        properties: {
+          addressPrefix: subnetDNSResolverInboundPrefix
+        }
+      }
+      {
+        name: 'DNSResolverOutboundSubnet'
+        properties: {
+          addressPrefix: subnetDNSResolverOutboundPrefix
         }
       }
       {
@@ -60,10 +74,14 @@ output opHubVnetName string = hubVnet.name
 output opHubVnetGatawaySubnetName string = hubVnet.properties.subnets[0].name
 output opHubVnetFirewallSubnetName string = hubVnet.properties.subnets[1].name
 output opHubVnetBastionSubnetName string = hubVnet.properties.subnets[2].name
-output opHubVnetSubnet01Name string = hubVnet.properties.subnets[3].name
-output opHubVnetSubnet02Name string = hubVnet.properties.subnets[4].name
+output opHubVnetDNSResolverInboundSubnetName string = hubVnet.properties.subnets[3].name
+output opHubVnetDNSResolverOutboundSubnetName string = hubVnet.properties.subnets[4].name
+output opHubVnetSubnet01Name string = hubVnet.properties.subnets[5].name
+output opHubVnetSubnet02Name string = hubVnet.properties.subnets[6].name
 output opHubVnetGatawaySubnetId string = hubVnet.properties.subnets[0].id
 output opHubVnetFirewallSubnetId string = hubVnet.properties.subnets[1].id
 output opHubVnetBastionSubnetId string = hubVnet.properties.subnets[2].id
-output opHubVnetSubnet01Id string = hubVnet.properties.subnets[3].id
-output opHubVnetSubnet02Id string = hubVnet.properties.subnets[4].id
+output opHubVnetDNSResolverinboundSubnetId string = hubVnet.properties.subnets[3].id
+output opHubVnetDNSResolveroutboundSubnetId string = hubVnet.properties.subnets[4].id
+output opHubVnetSubnet01Id string = hubVnet.properties.subnets[5].id
+output opHubVnetSubnet02Id string = hubVnet.properties.subnets[6].id

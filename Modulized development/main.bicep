@@ -4,12 +4,13 @@
 // - - - true: engage / false; not engage - - -
 @description('Booleans for engaging deployment')
 param DeployHubVnet bool = true
-param DeploySpokeVnet1 bool = true
-param DeploySpokeVnet2 bool = true
-param DeployGateway bool = true
-param DeployAFWPolicy bool = true
-param DeployAFWMainPart bool = true
-param DeployBastion bool = true
+param DeploySpokeVnet1 bool = false
+param DeploySpokeVnet2 bool = false
+param DeployGateway bool = false
+param DeployAFWPolicy bool = false
+param DeployAFWMainPart bool = false
+param DeployBastion bool = false
+param DeployDNSResolver bool = true
 // - - - 
 param DeployNSG bool = false
 param DeployVM bool = false
@@ -38,10 +39,12 @@ param ipAddressPrefixHub array = ['10.10.0.0/16']
 param subnetGatewayPrefix string = '10.10.0.0/26'
 param subnetFirewallPrefix string = '10.10.0.64/26'
 param subnetBastionPrefix  string = '10.10.0.128/25'
+param subnetDNSResolverInboundPrefix  string = '10.10.1.0/25'
+param subnetDNSResolverOutboundPrefix  string = '10.10.1.128/25'
 param subnetName01  string = 'PrivateHVnet-Subnet01'
-param subnetPrefix01 string = '10.10.1.0/24'
+param subnetPrefix01 string = '10.10.2.0/24'
 param subnetName02  string = 'PrivateHVnet-Subnet02'
-param subnetPrefix02 string = '10.10.2.0/24'
+param subnetPrefix02 string = '10.10.3.0/24'
 // - - - Spoke Virtual Network 01 - - - 
 @description('Parameters for Spoke Virtual Network 01')
 param vnetNameSpk1 string = 'Private-SpokeVNet-01'
@@ -159,6 +162,8 @@ module createHubVNet './modules/hub-vnet.bicep' = if (DeployHubVnet) {
     subnetGatewayPrefix: subnetGatewayPrefix
     subnetFirewallPrefix:subnetFirewallPrefix
     subnetBastionPrefix :subnetBastionPrefix
+    subnetDNSResolverInboundPrefix:subnetDNSResolverInboundPrefix
+    subnetDNSResolverOutboundPrefix:subnetDNSResolverOutboundPrefix
     subnetName01 :subnetName01
     subnetPrefix01: subnetPrefix01
     subnetName02 :subnetName02
@@ -225,8 +230,8 @@ module createVNetPeering2 './modules/vnetPeering.bicep' = if(DeploySpokeVnet2) {
     vnetNameSpk: createSpokeVNet2.outputs.opSpkVnetName
     vnetHubVnetID:createHubVNet.outputs.opHubVnetId
     vnetSpkVnetID:createSpokeVNet2.outputs.opSpkVnetId
-    hubToSpokePeeringName: 'hub-to-${createSpokeVNet2.outputs.opSpkVnetName}'
     spokeToHubPeeringName: '${createSpokeVNet2.outputs.opSpkVnetName}-to-hub'
+    hubToSpokePeeringName: 'hub-to-${createSpokeVNet2.outputs.opSpkVnetName}'
   }
 }
 
@@ -338,9 +343,45 @@ module createBastion './modules/bastion.bicep' = if(DeployBastion) {
 }
 
 
+// Create a DNS Resolver
+resource createDNSResolver 'Microsoft.Network/dnsResolvers@2022-07-01' = {
+  name: 'DNSResolverName'
+  tags: tags
+  location: location
+  properties: {
+    virtualNetwork: {
+      id: createHubVNet.outputs.opHubVnetId
+    }
+  }
+}
 
+resource createDNSResolverInboundEndPoint 'Microsoft.Network/dnsResolvers/inboundEndpoints@2022-07-01' = {
+  parent: createDNSResolver
+  name: 'createDNSResolverInboundEndPoint'
+  location: location
+  properties: {
+    ipConfigurations: [
+      {
+        privateIpAllocationMethod: 'Dynamic'
+        subnet: {
+          id: createHubVNet.outputs.opHubVnetDNSResolverinboundSubnetId
+        }
+      }
+    ]
+  }
+}
 
-
+resource createDNSResolverOutboundEndpoint 'Microsoft.Network/dnsResolvers/outboundEndpoints@2022-07-01' = {
+  parent: createDNSResolver
+  tags: tags
+  name: 'createDNSResolverInboundEndPoint'
+  location: location
+  properties: {
+    subnet: {
+      id: createHubVNet.outputs.opHubVnetDNSResolveroutboundSubnetId
+    }
+  }
+}
 
 
 
