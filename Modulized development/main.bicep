@@ -4,9 +4,9 @@
 // - - - true: engage / false; not engage - - -
 @description('Booleans for engaging deployment')
 param DeployHubVnet bool = true
-param DeploySpokeVnet1 bool = false
-param DeploySpokeVnet2 bool = false
-param DeployGateway bool = false
+param DeploySpokeVnet1 bool = true
+param DeploySpokeVnet2 bool = true
+param DeployGateway bool = true
 param DeployAFWPolicy bool = false
 param DeployAFWMainPart bool = false
 param DeployBastion bool = false
@@ -342,9 +342,11 @@ module createBastion './modules/bastion.bicep' = if(DeployBastion) {
   }
 }
 
-
 // Create a DNS Resolver
 resource createDNSResolver 'Microsoft.Network/dnsResolvers@2022-07-01' = {
+  dependsOn: [
+    createHubVNet
+  ]
   name: 'DNSResolverName'
   tags: tags
   location: location
@@ -374,7 +376,7 @@ resource createDNSResolverInboundEndPoint 'Microsoft.Network/dnsResolvers/inboun
 resource createDNSResolverOutboundEndpoint 'Microsoft.Network/dnsResolvers/outboundEndpoints@2022-07-01' = {
   parent: createDNSResolver
   tags: tags
-  name: 'createDNSResolverInboundEndPoint'
+  name: 'createDNSResolverOutboundEndPoint'
   location: location
   properties: {
     subnet: {
@@ -383,6 +385,46 @@ resource createDNSResolverOutboundEndpoint 'Microsoft.Network/dnsResolvers/outbo
   }
 }
 
+resource createDNSForwardRuleSet 'Microsoft.Network/dnsForwardingRulesets@2022-07-01' = {
+  name: 'createForwardRuleSet'
+  location: location
+  tags: tags
+  properties: {
+    dnsResolverOutboundEndpoints: [
+      {
+        id: createDNSResolverOutboundEndpoint.id
+      }
+    ]
+  }
+}
+
+resource createDNSResolverLink 'Microsoft.Network/dnsForwardingRulesets/virtualNetworkLinks@2022-07-01' = {
+  parent: createDNSForwardRuleSet
+  name: 'createDNSResolverLink'
+  properties: {
+    virtualNetwork: {
+      id: createHubVNet.outputs.opHubVnetId
+    }
+  }
+}
+
+resource createDNSForwardRules 'Microsoft.Network/dnsForwardingRulesets/forwardingRules@2022-07-01' = {
+  parent: createDNSForwardRuleSet
+  name: 'createDNSForwardRules'
+  properties: {
+    domainName: 'azure.com.'
+    targetDnsServers: [
+      {
+        ipAddress: '10.0.0.24'
+        port:53
+      }
+      {
+        ipAddress: '10.0.0.25'
+        port:53
+      }
+    ]
+  }
+}
 
 
 

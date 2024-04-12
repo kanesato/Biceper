@@ -5,13 +5,14 @@ RunVmFLG=1
 RunNicFLG=1
 RunDiskFLG=1
 RunSQLDatabaseFLG=1
+RunDNSResolverFLG=1
 
 deleteFLG=1
 # --- This script is used to delete all resources in the resource group ---
 subscriptionName="Skaneshiro-external-sub-1"
 resourceGroupName="Bicep-fundermental-resourcegroup"
 
-# --- delete all Virtual Network -------
+# --- delete Bastion -------
 echo "Getting Bastion list"
 echo " "
 if (( $RunBastionFLG == 1))
@@ -23,6 +24,88 @@ then
         az network bastion delete --ids $id
         wait
         echo "Deleted Bastion with Id: "$id
+        echo " "
+    done  
+fi
+
+# --- delete DNS Private resolver inbount && outbound endpoind-------
+echo "Getting DNS Private resolver list"
+echo " "
+if (( $RunDNSResolverFLG == 1))
+then
+    DPRs=$(az dns-resolver list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].{Name:name}" -o tsv)
+    for name in ${DPRs[@]}
+    do
+        # Delete DNS Private resolver inbound-endpoint
+        echo "Getting DNS Private resolver inbound-endpoint list attached to the DNS Private resolver: "$name""
+        echo " "
+        DPRinbounds=$(az dns-resolver inbound-endpoint list --resource-group $resourceGroupName --subscription $subscriptionName --dns-resolver-name $name --query "[].id" -o tsv)
+        for id in ${DPRinbounds[@]}
+        do
+            echo "Deleting DNS Private resolver inbound-endpoint with Id: "$id
+            az dns-resolver inbound-endpoint delete --ids $id --yes
+            wait
+            echo "Deleted DNS Private resolver inbound-endpoint with Id: "$id
+            echo " "
+        done
+
+        # Get DNS Private resolver rule-sets
+        echo "Getting DNS Private resolver rule-sets attached to the DNS Private resolver: "$name""
+        echo " "
+        DPRrulesets=$(az dns-resolver forwarding-ruleset list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].id" -o tsv)
+        for id in ${DPRrulesets[@]}
+        do
+            echo "Deleting DNS Private resolver rule-sets with Id: "$id
+            az dns-resolver forwarding-ruleset delete --ids $id --yes
+            wait
+            echo "Deleted DNS Private resolver rule-sets with Id: "$id
+            echo " "            
+        done
+
+        # Delete DNS Private resolver network-link
+        echo "Getting DNS Private resolver network-link attached to the DNS Private resolver: "$name""
+        echo " "
+        DPRinbounds=$(az dns-resolver inbound-endpoint list --resource-group $resourceGroupName --subscription $subscriptionName --dns-resolver-name $name --query "[].id" -o tsv)
+        for id in ${DPRinbounds[@]}
+        do
+            echo "Deleting DNS Private resolver inbound-endpoint with Id: "$id
+            az dns-resolver inbound-endpoint delete --ids $id --yes
+            wait
+            echo "Deleted DNS Private resolver inbound-endpoint with Id: "$id
+            echo " "
+        done
+
+
+
+        # Delete DNS Private resolver outbound-endpoint
+        echo "Getting DNS Private resolver outbound-endpoint list attached to the DNS Private resolver: "$name""
+        echo " "
+        DPRoutbounds=$(az dns-resolver outbound-endpoint list --resource-group $resourceGroupName --subscription $subscriptionName --dns-resolver-name $name --query "[].id" -o tsv)
+        for id in ${DPRoutbounds[@]}
+        do
+            echo "Deleting DNS Private resolver outbound-endpoint with Id: "$id
+            az dns-resolver outbound-endpoint delete --ids $id --yes
+            wait
+            echo "Deleted DNS Private resolver outbound-endpoint with Id: "$id
+            echo " "
+        done
+    done
+fi
+
+wait
+
+# --- delete all DNS Private resolver -------
+echo "Getting DNS Private resolver list"
+echo " "
+if (( $RunDNSResolverFLG == 1))
+then
+    items=$(az dns-resolver list --resource-group $resourceGroupName --subscription $subscriptionName --query "[].id" -o tsv)
+    for id in ${items[@]}
+    do
+        echo "Deleting DNS Private resolver with Id: "$id
+        az dns-resolver delete --ids $id --yes
+        wait
+        echo "Deleted DNS Private resolver with Id: "$id
         echo " "
     done
 fi
