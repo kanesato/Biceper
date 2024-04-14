@@ -1,0 +1,9 @@
+{"@id":"dtmi:assetGen:Trial-Robot;1",
+"@type":"Interface",
+"@context":"dtmi:dtdl:context;2",
+"displayName":"Trial-Room",
+"contents":[{"@type":"Relationship",
+"name":"contains",
+"properties":[{"@type":"Property",
+"name":"targetModel",
+"schema":"string"}]}]}

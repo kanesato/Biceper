@@ -1,0 +1,10 @@
+{"@id":"dtmi:assetGen:DistributionCenter;1",
+"@type":"Interface",
+"@context":"dtmi:dtdl:context;2",
+"displayName":"DistributionCenter",
+"contents":[{"@type":"Relationship",
+"name":"contains",
+"properties":[{"@type":"Property",
+"name":"targetModel",
+"schema":"string"}],
+"target":"dtmi:assetGen:RobotArm;1"}]}
