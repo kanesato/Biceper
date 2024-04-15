@@ -1,4 +1,4 @@
-{"@id":"dtmi:assetGen:Trial-Robot;1",
+{"@id":"dtmi:assetGen:TrialRobot;2",
 "@type":"Interface",
 "@context":"dtmi:dtdl:context;2",
 "displayName":"Trial-Room",

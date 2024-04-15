@@ -1,0 +1,12 @@
+az dt model create --dt-name 'poc-digital-twins' --models '{"@id": "dtmi:contosocom:DigitalTwins:Thermostat;2","@type": "Interface","@context": "dtmi:dtdl:context;2","displayName":"Thermostat01","contents":
+[
+  {
+    "@type":"Property",
+    "name":"Temperature",
+    "schema":"double"
+  }
+]
+}'
+
+
+az dt twin create  --dt-name 'poc-digital-twins' --dtmi "dtmi:contosocom:DigitalTwins:Thermostat;2" --twin-id thermostat67 --properties '{"Temperature": 0.0}'
